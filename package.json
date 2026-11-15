@@ -1,0 +1,36 @@
+{
+  "name": "cc-switch-ai-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "check": "npm run typecheck && npm test",
+    "acceptance": "python3 scripts/acceptance.py",
+    "providers": "tsx src/providers.ts",
+    "service:start": "node scripts/service.mjs start",
+    "service:stop": "node scripts/service.mjs stop",
+    "service:status": "node scripts/service.mjs status"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "dotenv": "^17.2.3",
+    "http-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.6",
+    "smol-toml": "^1.4.2",
+    "tsx": "^4.20.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.19.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.9.3",
+    "ws": "^8.18.3"
+  }
+}
