@@ -77,12 +77,13 @@ export async function handleRequest(request: Request, env: Env, fetcher: typeof 
     else headers.set('authorization', bearer!);
     if (app === 'claude' && !headers.has('anthropic-version')) headers.set('anthropic-version', '2023-06-01');
 
-    const timeout = Number(env.UPSTREAM_HEADER_TIMEOUT_MS ?? '120000');
-    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 3600000) {
+    const timeout = Number(env.UPSTREAM_HEADER_TIMEOUT_MS ?? '0');
+    if (!Number.isInteger(timeout) || timeout < 0 || timeout > 3600000) {
       throw new GatewayError('invalid_timeout_configuration', 503);
     }
     const controller = new AbortController();
-    timer = setTimeout(() => controller.abort(), timeout);
+    // The client/upstream owns request lifetime by default, including long reasoning.
+    if (timeout > 0) timer = setTimeout(() => controller.abort(), timeout);
     const upstreamRequest = new Request(new Request(target, request), {
       headers,
       redirect: 'manual',

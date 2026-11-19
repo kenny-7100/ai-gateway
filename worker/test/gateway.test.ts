@@ -127,3 +127,36 @@ test('shared key resolves per-app stored credentials and never reaches upstream'
   });
   assert.equal(passthrough.status, 200);
 });
+
+test('disabled header timeout permits long reasoning and preserves Codex response metadata', async () => {
+  const result = await handleRequest(new Request('https://gateway.example/codex/v1/responses', {
+    method: 'POST', headers: { authorization: 'Bearer secret', 'content-type': 'application/json', 'x-codex-turn-state': 'opaque-turn', 'session_id': 'opaque-session' },
+    body: JSON.stringify({ model: 'fixture', reasoning: { effort: 'high' }, previous_response_id: 'previous', tools: [{ type: 'function', name: 'fixture', parameters: { type: 'object' } }], stream: true }),
+  }), { ...env, UPSTREAM_HEADER_TIMEOUT_MS: '0' }, async input => {
+    const request = input as Request;
+    assert.equal(request.headers.get('x-codex-turn-state'), 'opaque-turn');
+    assert.equal(request.headers.get('session_id'), 'opaque-session');
+    const body = await request.json();
+    assert.equal(body.reasoning.effort, 'high');
+    assert.equal(body.previous_response_id, 'previous');
+    assert.equal(body.tools[0].name, 'fixture');
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(request.signal.aborted, false);
+    return new Response('data: fixture\n\n', { headers: { 'content-type': 'text/event-stream', 'x-codex-turn-state': 'next-turn', 'x-request-id': 'request-id', 'x-ratelimit-remaining-requests': '42' } });
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.headers.get('x-codex-turn-state'), 'next-turn');
+  assert.equal(result.headers.get('x-request-id'), 'request-id');
+  assert.equal(result.headers.get('x-ratelimit-remaining-requests'), '42');
+  assert.equal(await result.text(), 'data: fixture\n\n');
+});
+
+test('cancelling the returned SSE reader cancels the original upstream body', async () => {
+  let cancelled = false;
+  const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('data: first\n\n')); }, cancel() { cancelled = true; } });
+  const response = await handleRequest(new Request('https://gateway.example/codex/v1/responses', { headers: { authorization: 'Bearer secret' } }), env, async () => new Response(stream));
+  const reader = response.body!.getReader();
+  await reader.read();
+  await reader.cancel();
+  assert.equal(cancelled, true);
+});

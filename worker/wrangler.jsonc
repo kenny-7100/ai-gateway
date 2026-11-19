@@ -16,6 +16,6 @@
   "vars": {
     "CODEX_BASE_URL": "https://api.sudocode.chat/v1",
     "CLAUDE_BASE_URL": "https://api.sudocode.chat",
-    "UPSTREAM_HEADER_TIMEOUT_MS": "120000"
+    "UPSTREAM_HEADER_TIMEOUT_MS": "0"
   }
 }

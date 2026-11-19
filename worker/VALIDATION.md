@@ -1,5 +1,46 @@
 # Worker 真实验收记录
 
+## 实际 Codex 日常使用对照验收
+
+2026-11-19 部署版本：`59300ff8-e171-43ae-a211-1f59fd678cb9`。域名 `https://docs.jimao.uk`，模型 `gpt-6.1-sol`，上游为当前 CC Switch 配置的 SudoCode。
+
+移除默认额外的 120 秒响应头等待限制，`UPSTREAM_HEADER_TIMEOUT_MS=0`；可显式配置非零值。没有改动 Cloudflare Secrets。实际连接仍受上游、客户端及 Cloudflare 平台约束，不承诺无限等待。
+
+使用本机安装的实际 Codex CLI，分别在临时 CODEX_HOME、临时工作目录运行。直连组使用本机 CC Switch 真实凭据，Worker 组使用通用密钥；凭据只在验收观察代理的内存中参与请求，Codex 本身仅使用观察代理占位 Key。观察代理只监听 127.0.0.1，不改变正文，记录脱敏的模型、推理强度、流式标志和状态，不保存原始报文或原始 CLI 输出。临时会话和配置在验收后清除。CLI 版本命令报告 `codex-cli 0.0.0`（本机 VS Code 扩展附带二进制）。
+
+部署后的完整真实 CLI 对照共 12 项全部通过：
+
+| 场景 | 直连 SudoCode | Worker + 通用密钥 |
+| --- | --- | --- |
+| Responses SSE 基础对话 | 完成，最终输出 OK，3301 ms | 完成，最终输出 OK，3654 ms |
+| 恢复上一会话并回忆前一轮标记 | 完成，正确回忆，3597 ms | 完成，正确回忆，4683 ms |
+| 实际调用 shell 读取 fixture.txt，再回传结果继续生成 | 工具退出 0，最终内容正确，7995 ms | 工具退出 0，最终内容正确，8019 ms |
+| high 推理强度 | 请求确认为 high，输出 OK，4333 ms | 请求确认为 high，输出 OK，4037 ms |
+| 流开始后向 CLI 发送 SIGINT 取消 | 请求返回 200 后连接关闭，回合未完成 | 请求返回 200 后连接关闭，回合未完成 |
+| 无效模型的实际 CLI 错误处理 | 上游 400，CLI 错误退出 | 上游 400，CLI 错误退出 |
+
+基础、多轮和工具循环均观察到 `model=gpt-6.1-sol`、`reasoning.effort=medium`、`stream=true`。工具调用有正常的两次 Responses 请求，完成工具结果回传后的生成；最终答案检查忽略 Codex 过程说明，只核对最终 agent message。
+
+独立真实传输/错误对照也全部通过：
+
+| 检查 | 直连 | Worker | 比较方式 |
+| --- | --- | --- | --- |
+| 无效模型 | 400 | 400 | 稳定 JSON 错误字段一致 |
+| 无效 Key | 401 | 401 | 稳定 JSON 错误字段一致 |
+| 未知 API 路径 | 403 | 403 | 上游 WAF HTML 页面标题一致，忽略动态 Ray ID/IP 等 |
+| Responses WebSocket 握手 | 404 | 404 | 上游当前不支持；没有真实 WebSocket 生成结果 |
+
+本地 Worker 严格类型检查、9 项模拟测试、Wrangler 打包及 1 项实际 Workers 运行时测试均通过。新增模拟检查验证 Codex 会话/请求/限额头、工具和推理参数保留、禁用额外超时以及 SSE 消费端取消传递至上游流。验收脚本另行通过 TypeScript 严格检查。
+
+结论：在上述实际 Codex CLI、当前模型和 SSE 场景中，未发现 Worker 导致的使用功能差异。取消验证不证明供应商服务端停止计算或计费；未验证所有模型、图片、超长上下文、长时间运行、IDE UI 或真实 WebSocket 生成。网络延迟、出口地区、平台容量和上游 WAF 动态字段仍可能不同。本次结果不等于整个 SudoCode 服务在所有条件下逐字节一致。
+
+复测（仓库根目录，先通过环境变量安全提供通用密钥）：
+
+```sh
+npm run acceptance:codex-parity
+npm run acceptance:codex-transport
+```
+
 ## 通用密钥模式验收
 
 2026-11-19 部署版本：`2d3700f7-50bf-4064-a8f5-c8d695d0f0ed`。新增通用密钥匹配后使用 Cloudflare Secrets 中对应入口凭据的能力。当前真实凭据通过标准输入上传至 Cloudflare Secrets，未写入本地文件；此前的“没有保存为 Worker Secret”仅描述下面首轮直接转发验收时的状态。

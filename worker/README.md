@@ -40,7 +40,7 @@ npm run dev
 | --- | --- | --- |
 | `CODEX_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容 API 根路径，追加 `/responses`、`/models` 等 |
 | `CLAUDE_BASE_URL` | `https://api.anthropic.com` | Anthropic 基础路径，追加 `/v1/messages` 等 |
-| `UPSTREAM_HEADER_TIMEOUT_MS` | `120000` | 等待上游响应头时限，1–3600000 毫秒 |
+| `UPSTREAM_HEADER_TIMEOUT_MS` | `0` | 默认关闭额外响应头超时；可设 1–3600000 毫秒 |
 
 例如 OpenAI 兼容供应商 API 根地址为 `https://provider.example/api/v1`，将 `CODEX_BASE_URL` 设置为该地址；请求 `/codex/v1/responses` 会转发至 `https://provider.example/api/v1/responses`。Claude 上游如果配置为 `https://provider.example/anthropic`，请求 `/claude/v1/messages` 会转发至 `https://provider.example/anthropic/v1/messages`。
 
@@ -77,7 +77,7 @@ curl -N https://<Worker域名>/claude/v1/messages \
 
 ## 行为与边界
 
-- HTTP 请求正文和 SSE 响应按流转发，不缓冲、不解析模型内容，不重试生成。收到响应头后不再应用网关超时；实际连接仍受 Cloudflare 和上游限制。
+- HTTP 请求正文和 SSE 响应按流转发，不缓冲、不解析模型内容，不重试生成。默认不增加响应头或 SSE 空闲超时，让 Codex 和上游管理长推理请求的等待；实际连接仍受 Cloudflare 和上游限制。显式设置非零响应头超时才会额外限制等待。
 - WebSocket 升级通过 Workers Fetch 原生转发，保留上游的 101 响应；供应商本身必须支持该接口。浏览器原生 WebSocket 无法设置 Bearer 请求头，请使用支持设置鉴权头的客户端。
 - 不跟随上游重定向，带 Location 的 3xx 返回 `502 upstream_redirect_rejected`，避免凭据被带到重定向目标。
 - 移除调用方 Cookie、代理身份头和无关 API Key；响应不下发上游 Cookie，并设置 `Cache-Control: no-store`。Cloudflare 可能管理部分传输头，因此不是 TCP 层的逐字节代理。
@@ -124,3 +124,18 @@ unset GATEWAY_SHARED_API_KEY
 ```
 
 同步脚本在内存中解析当前凭据，通过标准输入传给 Wrangler secret bulk；不写入文件、不输出凭据。先确认 Wrangler 登录有效、上游地址匹配。Secrets 更新后立即生效；CC Switch 后续更换 Key 时需重新同步，Worker 不会自动读取本机配置。测试会消耗供应商额度。
+
+## 实际 Codex 对照验收
+
+在仓库根目录安全设置 `GATEWAY_SHARED_API_KEY` 后执行：
+
+```sh
+npm run acceptance:codex-parity
+npm run acceptance:codex-transport
+```
+
+需要本机 `codex` 命令（或通过 `CODEX_BIN` 指定路径）及根目录依赖。两组验收都会只读使用 CC Switch 当前 Codex 配置。CLI 验收在临时 CODEX_HOME 和临时工作目录中分别运行直连、Worker 两组会话，验证多轮恢复、medium/high 推理参数、实际文件读取工具及结果回传、SSE、取消、无效模型错误。它通过仅监听回环地址的观察代理记录模型、参数、状态及连接关闭，不输出凭据、原始请求/响应或 CLI 正文；观察代理也不保存凭据文件，结束时清除临时会话。
+
+传输验收比较无效模型、无效 Key、未知 API 路径和真实 WebSocket 握手。错误 JSON 比较稳定字段；上游 WAF HTML 只比较状态和页面标题，忽略 Ray ID 等动态内容。当前 SudoCode WebSocket 握手两边均为 404，因此实际 Codex 验收使用 Responses SSE。未来供应商或 Codex 更新后应重新验收，不能把本次结果扩展为所有模型/所有接口均等价。
+
+取消测试验证客户端中断并关闭下游连接，本地单元测试也验证取消流会传递到原始上游流；不据此承诺供应商服务端停止计费。CLI 生成、工具循环及取消测试会消耗供应商额度。
