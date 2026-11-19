@@ -1,3 +1,5 @@
+import { siteResponse } from './site.js';
+
 export interface Env {
   CODEX_BASE_URL: string;
   CLAUDE_BASE_URL: string;
@@ -40,6 +42,8 @@ export async function handleRequest(request: Request, env: Env, fetcher: typeof 
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const incoming = new URL(request.url);
+    const page = siteResponse(request, incoming.pathname);
+    if (page) return page;
     if (incoming.pathname === '/health' && request.method === 'GET') {
       baseUrl(env.CODEX_BASE_URL);
       baseUrl(env.CLAUDE_BASE_URL);

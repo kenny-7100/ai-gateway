@@ -1,5 +1,7 @@
 # AI Gateway Worker
 
+浏览器访问域名根路径时返回 AI 技术博客首页，`/notes` 和 `/notes/<文章路径>` 提供完整文章。页面为内置的静态 HTML/CSS，支持手机布局，无需前端构建或第三方资源。HTML 只在这些页面的 GET/HEAD 请求返回；API 路径仍使用原有鉴权、JSON 和流式转发逻辑。
+
 独立的 Cloudflare Workers 子项目，使用 TypeScript、原生 Fetch API 和 Wrangler。无需 CC Switch、SQLite、服务器进程或存储服务。
 
 每次请求必须携带 API Key。支持调用方自己的真实供应商 Key，以及配置的通用密钥：匹配通用密钥时，Worker 使用 Cloudflare Secrets 中保存的对应入口真实凭据；其他 Key 直接转发，由上游验证。
