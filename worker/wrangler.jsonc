@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ai-gateway-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "docs.jimao.uk",
+      "custom_domain": true
+    }
+  ],
+  "observability": {
+    "enabled": false
+  },
+  "vars": {
+    "CODEX_BASE_URL": "https://api.sudocode.chat/v1",
+    "CLAUDE_BASE_URL": "https://api.sudocode.chat",
+    "UPSTREAM_HEADER_TIMEOUT_MS": "120000"
+  }
+}

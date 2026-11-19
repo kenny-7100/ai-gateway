@@ -1,5 +1,7 @@
 # CC Switch AI Gateway
 
+仓库同时包含独立的 [Cloudflare Worker 子项目](worker/README.md)：部署在 Cloudflare Workers，由调用方传入真实供应商 API Key。以下说明对应本机 CC Switch 局域网网关。
+
 使用 TypeScript 和 `tsx` 运行的局域网 AI 网关。只读本机 CC Switch 的供应商配置，将 Claude / Codex 的原生 API 转发给局域网客户端。客户端无需真实 API Key；要求填写 Key 的客户端可以填 `12345678`。
 
 HTTP 请求与响应正文、SSE 数据、WebSocket 帧不做协议转换。模型名称、工具参数、模型输出和供应商错误由上游决定。网关只处理路由、鉴权替换、连接管理以及 HTTP 代理必须调整的头部。

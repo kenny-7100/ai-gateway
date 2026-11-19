@@ -13,6 +13,8 @@
     "test": "tsx --test test/*.test.ts",
     "check": "npm run typecheck && npm test",
     "acceptance": "python3 scripts/acceptance.py",
+    "acceptance:worker": "tsx scripts/acceptance-worker.ts",
+    "secrets:worker": "tsx scripts/sync-worker-secrets.ts",
     "providers": "tsx src/providers.ts",
     "service:start": "node scripts/service.mjs start",
     "service:stop": "node scripts/service.mjs stop",
