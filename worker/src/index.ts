@@ -49,10 +49,11 @@ export async function handleRequest(request: Request, env: Env, fetcher: typeof 
       baseUrl(env.CLAUDE_BASE_URL);
       return Response.json({ status: 'ready' }, { headers: { 'cache-control': 'no-store' } });
     }
+    const summary = incoming.pathname.match(/^\/summary-20261121(\/.*)?$/);
     const match = incoming.pathname.match(/^\/(codex|claude)(\/v1(?:\/.*)?)$/);
-    if (!match) return fail('route_not_found', 404);
-    const app = match[1]!;
-    const path = match[2]!;
+    if (!summary && !match) return fail('route_not_found', 404);
+    const app = summary ? 'codex' : match![1]!;
+    const path = summary ? `/v1${summary[1] ?? ''}` : match![2]!;
     const bearer = request.headers.get('authorization');
     const validBearer = bearer !== null && /^Bearer\s+\S+$/i.test(bearer);
     const apiKey = request.headers.get('x-api-key')?.trim();

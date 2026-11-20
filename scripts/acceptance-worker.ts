@@ -28,6 +28,9 @@ function report(value: Record<string, unknown>) {
 
 let failed = false;
 try {
+  const codexBase = process.env.WORKER_CODEX_BASE_URL ?? 'https://docs.jimao.uk/codex/v1';
+  const acceptanceUrl = new URL(codexBase);
+  if (acceptanceUrl.protocol !== 'https:' || !['doc.jimao.uk', 'docs.jimao.uk'].includes(acceptanceUrl.hostname) || acceptanceUrl.username || acceptanceUrl.password || acceptanceUrl.search || acceptanceUrl.hash) throw new Error('invalid acceptance URL');
   if (shared && !sharedKey) throw new Error('shared key required');
   if (sharedKey) secrets.push(sharedKey);
   const config = JSON.parse(readFileSync(configPath, 'utf8'));
@@ -73,7 +76,7 @@ try {
               ? { model, input: 'Reply with exactly OK.', stream: streaming }
               : { model, max_tokens: 64, messages: [{ role: 'user', content: 'Reply with exactly OK.' }], stream: streaming };
             const path = mode === 'models' ? 'models' : app === 'codex' ? 'responses' : 'messages';
-            const url = `https://docs.jimao.uk/${app}/v1/${path}`;
+            const url = app === 'codex' ? `${codexBase.replace(/\/$/, '')}/${path}` : `https://docs.jimao.uk/${app}/v1/${path}`;
             const body = payload === undefined ? undefined : JSON.stringify(payload);
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 180000);

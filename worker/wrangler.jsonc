@@ -6,6 +6,10 @@
   "workers_dev": true,
   "routes": [
     {
+      "pattern": "doc.jimao.uk",
+      "custom_domain": true
+    },
+    {
       "pattern": "docs.jimao.uk",
       "custom_domain": true
     }

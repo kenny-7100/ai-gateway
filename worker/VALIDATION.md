@@ -1,5 +1,15 @@
 # Worker 真实验收记录
 
+## 新 Codex 入口验收（2026-11-21）
+
+部署版本：`6bd25464-9d10-4932-af12-fa34673f986b`。新增自定义域名 `doc.jimao.uk`，Codex Base URL 为 `https://doc.jimao.uk/summary-20261121`。客户端直接追加 `/responses`、`/models`，无需额外 `/v1`。旧域名和旧入口保留兼容，现有 Secrets 未更改。
+
+新入口通用密钥验收，模型 `gpt-6.1-sol`：模型列表 HTTP 200（344 ms），普通生成 HTTP 200 且完成并输出 OK（1911 ms），SSE HTTP 200 且完成并输出 OK（2987 ms，10 个事件）。
+
+使用 `WORKER_CODEX_BASE_URL=https://doc.jimao.uk/summary-20261121` 重新执行完整实际 Codex CLI 对照，共 12 项通过：直连与新入口各自完成基础 SSE、会话恢复、实际文件读取工具与结果回传、high 推理、取消、无效模型处理。Worker 基础 4678 ms、多轮 3657 ms、工具循环 6108 ms、high 2859 ms；取消连接关闭，无效模型 400 后 CLI 错误退出，均符合预期。
+
+新域名健康检查 200，未鉴权模型请求 401。两个域名根路径博客均为 200 HTML，旧 Codex 入口仍正确要求鉴权。Worker 10 项模拟测试、类型检查、部署打包和 Workers 运行时检查通过；两个修改后的验收脚本通过严格类型检查。
+
 ## 实际 Codex 日常使用对照验收
 
 2026-11-19 部署版本：`59300ff8-e171-43ae-a211-1f59fd678cb9`。域名 `https://docs.jimao.uk`，模型 `gpt-6.1-sol`，上游为当前 CC Switch 配置的 SudoCode。

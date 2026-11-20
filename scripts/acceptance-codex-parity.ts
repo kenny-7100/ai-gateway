@@ -24,12 +24,15 @@ try {
   db.close();
   const model = (parse(JSON.parse(row.settings_config).config) as { model: string }).model;
   if (!model || !process.env.GATEWAY_SHARED_API_KEY) throw new Error();
+  const workerBase = process.env.WORKER_CODEX_BASE_URL ?? 'https://docs.jimao.uk/codex/v1';
+  const workerUrl = new URL(workerBase);
+  if (workerUrl.protocol !== 'https:' || !['doc.jimao.uk', 'docs.jimao.uk'].includes(workerUrl.hostname) || workerUrl.username || workerUrl.password || workerUrl.search || workerUrl.hash) throw new Error();
   const proxy = proxyUrl(process.env.UPSTREAM_PROXY ?? 'system');
   const agent = proxy ? new HttpsProxyAgent(proxy) : undefined;
   try {
     for (const target of ['direct', 'worker'] as const) {
       const root = mkdtempSync(join(tmpdir(), 'codex-parity-'));
-      const upstream = target === 'direct' ? provider.baseUrl : 'https://docs.jimao.uk/codex/v1';
+      const upstream = target === 'direct' ? provider.baseUrl : workerBase;
       const credentials = target === 'direct' ? provider.headers : { authorization: `Bearer ${process.env.GATEWAY_SHARED_API_KEY}` };
       const observed: { path: string; model?: string; effort?: string; stream?: boolean; tools?: number; status?: number; cancelled?: boolean }[] = [];
       let cancelOnData = false;

@@ -1,5 +1,16 @@
 # AI Gateway Worker
 
+当前推荐的 Codex Base URL 为 **`https://doc.jimao.uk/summary-20261121`**（`doc` 为单数）。直接填写这个完整前缀，不追加 `/v1` 或 `/codex`；Codex 会追加 `/responses`、`/models` 等接口路径。使用现有通用密钥或匹配上游的真实 Key。旧的 `https://docs.jimao.uk/codex/v1` 保留兼容。两个域名根路径都提供博客页面。
+
+新入口复测（在仓库根目录，先安全设置 `GATEWAY_SHARED_API_KEY`）：
+
+```sh
+WORKER_CODEX_BASE_URL=https://doc.jimao.uk/summary-20261121 npm run acceptance:worker -- --shared
+WORKER_CODEX_BASE_URL=https://doc.jimao.uk/summary-20261121 npm run acceptance:codex-parity
+```
+
+`WORKER_CODEX_BASE_URL` 只允许这两个已配置的 HTTPS 域名。Claude 入口继续使用原路径；新前缀专用于 Codex。
+
 浏览器访问域名根路径时返回 AI 技术博客首页，`/notes` 和 `/notes/<文章路径>` 提供完整文章。页面为内置的静态 HTML/CSS，支持手机布局，无需前端构建或第三方资源。HTML 只在这些页面的 GET/HEAD 请求返回；API 路径仍使用原有鉴权、JSON 和流式转发逻辑。
 
 独立的 Cloudflare Workers 子项目，使用 TypeScript、原生 Fetch API 和 Wrangler。无需 CC Switch、SQLite、服务器进程或存储服务。

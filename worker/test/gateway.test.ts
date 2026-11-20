@@ -160,3 +160,22 @@ test('cancelling the returned SSE reader cancels the original upstream body', as
   await reader.cancel();
   assert.equal(cancelled, true);
 });
+
+test('dated Codex API root appends native API paths without an extra v1', async () => {
+  const configured = { ...env, SHARED_API_KEY: 'fixture-shared', CODEX_UPSTREAM_HEADERS: JSON.stringify({ authorization: 'Bearer stored-codex' }) };
+  for (const path of ['/models', '/responses', '/responses/fixture/compact', '/chat/completions']) {
+    const result = await handleRequest(new Request(`https://doc.jimao.uk/summary-20261121${path}?x=%2F&x=2`, {
+      headers: { authorization: 'Bearer fixture-shared' },
+    }), configured, async input => {
+      const request = input as Request;
+      assert.equal(request.url, `https://openai.example/backend-api/codex${path}?x=%2F&x=2`);
+      assert.equal(request.headers.get('authorization'), 'Bearer stored-codex');
+      return new Response('{}');
+    });
+    assert.equal(result.status, 200);
+  }
+  const unauthenticated = await handleRequest(new Request('https://doc.jimao.uk/summary-20261121/models'), configured, neverFetch);
+  assert.equal(unauthenticated.status, 401);
+  const unrelated = await handleRequest(new Request('https://doc.jimao.uk/summary-202611210/models'), configured, neverFetch);
+  assert.equal(unrelated.status, 404);
+});
